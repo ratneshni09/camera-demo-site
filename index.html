@@ -1,0 +1,196 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Send Photo</title>
+
+  <style>
+    * { box-sizing: border-box; }
+
+    body {
+      font-family: Arial, sans-serif;
+      background: #f3f4f6;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      margin: 0;
+      padding: 20px;
+    }
+
+    .card {
+      background: white;
+      padding: 25px;
+      border-radius: 16px;
+      text-align: center;
+      width: 100%;
+      max-width: 380px;
+      box-shadow: 0 4px 18px #0002;
+    }
+
+    video {
+      width: 100%;
+      border-radius: 10px;
+      margin: 12px 0;
+      display: none;
+    }
+
+    button {
+      width: 100%;
+      padding: 14px;
+      margin-top: 10px;
+      border: 0;
+      border-radius: 9px;
+      background: #1677ff;
+      color: white;
+      font-size: 16px;
+      cursor: pointer;
+    }
+
+    button:disabled { opacity: 0.6; }
+
+    #sendBtn {
+      background: #159447;
+      display: none;
+    }
+
+    #status {
+      margin-top: 15px;
+      overflow-wrap: anywhere;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="card">
+    <h2>Send Photo</h2>
+
+    <p>
+      Your camera will open when you tap Start Camera.
+      You can preview your photo before choosing to send it
+      to the site owner through Telegram.
+    </p>
+
+    <video id="camera" autoplay playsinline></video>
+
+    <button id="startBtn">Start Camera</button>
+    <button id="sendBtn">Capture & Send Photo</button>
+
+    <p id="status" role="status"></p>
+  </div>
+
+  <script>
+    const BACKEND =
+      "https://camera-share-backend.onrender.com";
+
+    const video = document.getElementById("camera");
+    const startBtn = document.getElementById("startBtn");
+    const sendBtn = document.getElementById("sendBtn");
+    const statusText = document.getElementById("status");
+
+    let stream = null;
+
+    function getToken() {
+      const params = new URLSearchParams(location.search);
+      return params.get("token") || params.get("session");
+    }
+
+    startBtn.addEventListener("click", async () => {
+      try {
+        if (!navigator.mediaDevices?.getUserMedia) {
+          throw new Error("Camera is not supported.");
+        }
+
+        statusText.textContent = "Requesting camera permission...";
+
+        stream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: "user" },
+          audio: false
+        });
+
+        video.srcObject = stream;
+        video.style.display = "block";
+
+        await video.play();
+
+        statusText.textContent =
+          "Camera ready. Preview your photo, then choose to send it.";
+
+        startBtn.disabled = true;
+        sendBtn.style.display = "block";
+
+      } catch (error) {
+        statusText.textContent = error.message;
+      }
+    });
+
+    sendBtn.addEventListener("click", async () => {
+      const token = getToken();
+
+      if (!token) {
+        statusText.textContent = "Invalid or missing link.";
+        return;
+      }
+
+      if (!stream || !video.videoWidth) {
+        statusText.textContent = "Start the camera first.";
+        return;
+      }
+
+      sendBtn.disabled = true;
+      statusText.textContent = "Preparing photo...";
+
+      try {
+        const canvas = document.createElement("canvas");
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+
+        canvas.getContext("2d").drawImage(
+          video, 0, 0, canvas.width, canvas.height
+        );
+
+        const blob = await new Promise(resolve =>
+          canvas.toBlob(resolve, "image/jpeg", 0.9)
+        );
+
+        if (!blob) throw new Error("Could not create photo.");
+
+        const formData = new FormData();
+        formData.append("photo", blob, "photo.jpg");
+
+        statusText.textContent = "Sending photo...";
+
+        const response = await fetch(
+          `${BACKEND}/upload/${encodeURIComponent(token)}`,
+          {
+            method: "POST",
+            body: formData
+          }
+        );
+
+        const result = await response.text();
+
+        if (!response.ok) throw new Error(result);
+
+        statusText.textContent = "Photo sent successfully!";
+        sendBtn.textContent = "Photo Sent";
+
+      } catch (error) {
+        statusText.textContent =
+          error.message || "Could not send photo.";
+        sendBtn.disabled = false;
+
+      } finally {
+        if (stream) {
+          stream.getTracks().forEach(track => track.stop());
+          stream = null;
+        }
+        video.srcObject = null;
+        video.style.display = "none";
+      }
+    });
+  </script>
+</body>
+</html>
